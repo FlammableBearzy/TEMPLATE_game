@@ -1,51 +1,81 @@
-create database mygame;
+-- Translating from MySQL to Postgre.
 
-use mygame;
+-- DROP TABLE IF EXISTS user_player CASCADE;
+-- DROP TABLE IF EXISTS game_state CASCADE;
+-- DROP TABLE IF EXISTS user_game_state CASCADE;
+-- DROP TABLE IF EXISTS game CASCADE;
+-- DROP TABLE IF EXISTS user_game CASCADE;
+-- DROP TABLE IF EXISTS card CASCADE;
+-- DROP TABLE IF EXISTS user_game_card CASCADE;
 
-create table user (
-    usr_id int not null auto_increment,
-    usr_name varchar(60) not null,
-    usr_pass varchar(200) not null, 
-    usr_token varchar(200),
-    primary key (usr_id));
+CREATE TABLE user_player (
+    usr_id SERIAL PRIMARY KEY,
+    usr_name varchar(60) NOT NULL,
+    usr_pass varchar(200) NOT NULL, 
+    usr_token varchar(200)
+);
+CREATE TABLE game_state (
+    gst_id SERIAL PRIMARY KEY,
+    gst_state varchar(60) NOT NULL
+);
 
-create table game (
-    gm_id int not null auto_increment,
-    gm_turn int not null default 1,
-    gm_state_id int not null,
-    primary key (gm_id));
+CREATE TABLE user_game_state (
+    ugst_id SERIAL PRIMARY KEY,
+    ugst_state varchar(60) NOT NULL
+);
 
-create table game_state (
-    gst_id int not null auto_increment,
-    gst_state varchar(60) not null,
-    primary key (gst_id));
+CREATE TABLE game (
+    gm_id SERIAL PRIMARY KEY,
+    gm_turn int NOT NULL DEFAULT 1,
+    gm_state_id int NOT NULL --REFERENCES game_state(gst_id)
+);
 
-create table user_game (
-    ug_id int not null auto_increment,
-    ug_user_id int not null,
-    ug_game_id int not null,
-    ug_state_id int not null,
-    primary key (ug_id));
+CREATE TABLE user_game (
+    ug_id SERIAL PRIMARY KEY,
+    ug_user_id int NOT NULL, --REFERENCES user_player(usr_id),
+    ug_game_id int NOT NULL, --REFERENCES game(gm_id),
+    ug_state_id int NOT NULL, --REFERENCES user_game_state(ugst_id)
+	ug_damage int DEFAULT 0,
+	ug_draw boolean DEFAULT FALSE
+);
 
-create table user_game_state (
-    ugst_id int not null auto_increment,
-    ugst_state varchar(60) not null,
-    primary key (ugst_id));
+CREATE TABLE card(
+	crd_id SERIAL PRIMARY KEY,
+	crd_name varchar(60) NOT NULL,
+	crd_attack int NOT NULL,
+	crd_health int NOT NULL
+);
 
-# Foreign Keys
+CREATE TABLE user_game_card(
+	ugc_id SERIAL PRIMARY KEY,
+	ugc_ug_id int NOT NULL,
+	ugc_crd_id int NOT NULL,
+	ugc_current_health int NOT NULL,
+	ugc_was_used boolean NOT NULL
+);
 
-alter table game add constraint game_fk_match_state
-            foreign key (gm_state_id) references game_state(gst_id) 
-			ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- Foreign Keys
 
-alter table user_game add constraint user_game_fk_user
-            foreign key (ug_user_id) references user(usr_id) 
-			ON DELETE NO ACTION ON UPDATE NO ACTION;
+ALTER TABLE game ADD CONSTRAINT game_fk_match_state
+    FOREIGN KEY (gm_state_id) REFERENCES game_state(gst_id) 
+    ON DELETE NO ACTION ON UPDATE NO ACTION;
 
-alter table user_game add constraint user_game_fk_game
-            foreign key (ug_game_id) references game(gm_id) 
-			ON DELETE NO ACTION ON UPDATE NO ACTION;
+ALTER TABLE user_game ADD CONSTRAINT user_game_fk_user
+    FOREIGN KEY (ug_user_id) REFERENCES user_player(usr_id) 
+    ON DELETE NO ACTION ON UPDATE NO ACTION;
 
-alter table user_game add constraint user_game_fk_user_game_state
-            foreign key (ug_state_id) references user_game_state(ugst_id) 
-			ON DELETE NO ACTION ON UPDATE NO ACTION;
+ALTER TABLE user_game ADD CONSTRAINT user_game_fk_game
+    FOREIGN KEY (ug_game_id) REFERENCES game(gm_id) 
+    ON DELETE NO ACTION ON UPDATE NO ACTION;
+
+ALTER TABLE user_game ADD CONSTRAINT user_game_fk_user_game_state
+    FOREIGN KEY (ug_state_id) REFERENCES user_game_state(ugst_id) 
+    ON DELETE NO ACTION ON UPDATE NO ACTION;
+	
+ALTER TABLE user_game_card ADD CONSTRAINT ugc_fk_ug
+    FOREIGN KEY (ugc_ug_id) REFERENCES user_game(ug_id) 
+    ON DELETE NO ACTION ON UPDATE NO ACTION;
+	
+ALTER TABLE user_game_card ADD CONSTRAINT ugc_fk_card
+    FOREIGN KEY (ugc_crd_id) REFERENCES card(crd_id) 
+    ON DELETE NO ACTION ON UPDATE NO ACTION;

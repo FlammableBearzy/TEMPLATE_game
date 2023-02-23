@@ -13,7 +13,8 @@ class User {
 
     static async getById(id) {
         try {
-            let [dbUsers] = await pool.query("Select * from user where usr_id=?", [id]);
+            let dbres = await pool.query("Select * from user_player where usr_id = $1", [id]);
+            let dbUsers = dbres.rows;
             if (!dbUsers.length) 
                 return { status: 404, result:{msg: "No user found for that id."} } ;
             let dbUser = dbUsers[0];
@@ -27,8 +28,8 @@ class User {
 
     static async register(user) {
         try {
-            let [dbUsers] =
-                await pool.query("Select * from user where usr_name=?", [user.name]);
+            let dbres = await pool.query("Select * from user_player where usr_name = $1", [user.name]);
+            let dbUsers = dbres.rows;
             if (dbUsers.length)
                 return {
                     status: 400, result: [{
@@ -37,9 +38,7 @@ class User {
                     }]
                 };
             let encpass = await bcrypt.hash(user.pass,saltRounds);   
-            let [result] =
-                await pool.query(`Insert into user (usr_name, usr_pass)
-                values (?,?)`, [user.name, encpass]);
+            let result = await pool.query(`Insert into user_player (usr_name, usr_pass) values ($1, $2)`, [user.name, encpass]);
             return { status: 200, result: {msg:"Registered! You can now log in."}} ;
         } catch (err) {
             console.log(err);
@@ -50,8 +49,8 @@ class User {
 
     static async checkLogin(user) {
         try {
-            let [dbUsers] =
-                await pool.query("Select * from user where usr_name=?", [user.name]);
+            let dbres = await pool.query("Select * from user_player where usr_name = $1", [user.name]);
+            let dbUsers = dbres.rows;
             if (!dbUsers.length)
                 return { status: 401, result: { msg: "Wrong username or password!"}};
             let dbUser = dbUsers[0]; 
@@ -69,9 +68,7 @@ class User {
     // No verifications. Only to use internally
     static async saveToken(user) {
         try {
-            let [result] =
-                await pool.query(`Update user set usr_token=? where usr_id = ?`,
-                [user.token,user.id]);
+            let dbres = await pool.query(`Update user_player set usr_token = $1 where usr_id = $2`,[user.token ,user.id]);
             return { status: 200, result: {msg:"Token saved!"}} ;
         } catch (err) {
             console.log(err);
@@ -81,13 +78,13 @@ class User {
 
     static async getUserByToken(token) {
         try {
-            let [result] =
-                await pool.query(`Select * from user where usr_token = ?`,[token]);
-            if (!result.length)
+            let dbres = await pool.query(`Select * from user_player where usr_token = $1`,[token]);
+            let dbUserToken = dbres.rows;
+            if (!dbUserToken.length)
                 return { status: 403, result: {msg:"Invalid authentication!"}} ;
             let user = new User();
-            user.id = result[0].usr_id;
-            user.name = result[0].usr_name;
+            user.id = dbUserToken[0].usr_id;
+            user.name = dbUserToken[0].usr_name;
             return { status: 200, result: user} ;
         } catch (err) {
             console.log(err);
